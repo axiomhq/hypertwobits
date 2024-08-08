@@ -69,8 +69,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
         }
 
         if count_changed && f64::from(self.count) >= Self::ALPHA * f64::from(BITS::M) {
-            self.sketch.decrement();
-            self.count = self.sketch.count();
+            self.count = self.sketch.decrement();
             self.t += 4;
         }
     }
