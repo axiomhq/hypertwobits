@@ -15,8 +15,8 @@ pub trait Sketch: Default {
     fn val(&self, k: u32) -> u8;
     /// Sets the value of the sketch at position k
     fn set(&mut self, k: u32, v: u8);
-    /// Decrements the sketch
-    fn decrement(&mut self);
+    /// Decrements the sketch and returns the new element count
+    fn decrement(&mut self) -> u32;
     /// Returns the number of active sub streams in the sketch
     fn count(&self) -> u32;
 }
@@ -50,10 +50,15 @@ impl Sketch for M64 {
         self.lo = (self.lo & !(1 << k)) | ((v & 1) << k);
     }
     #[inline]
-    fn decrement(&mut self) {
+    fn decrement(&mut self) -> u32 {
+        // since we decrement our new count will equal the number of streams that currently are
+        // set too two or three so we can count cheaply at this point by just looking at the number
+        // of ones in the high bits;
+        let c = self.hi.count_ones();
         // calculate the sketch where each value is decremented by 1
         self.lo = self.hi & !self.lo;
         self.hi &= !self.lo;
+        c
     }
     #[inline]
     fn count(&self) -> u32 {
@@ -101,9 +106,11 @@ impl Sketch for M128 {
         self.lo = (self.lo & !(1 << k)) | ((v & 1) << k);
     }
     #[inline]
-    fn decrement(&mut self) {
+    fn decrement(&mut self) -> u32 {
+        let count = self.hi.count_ones();
         self.lo = self.hi & !self.lo;
         self.hi &= !self.lo;
+        count
     }
     #[inline]
     fn count(&self) -> u32 {
@@ -166,12 +173,15 @@ impl<const REGISTERS: usize> M128Reg<REGISTERS> {
         self.s[i].lo = (self.s[i].lo & !(1 << k)) | ((v & 1) << k);
     }
     #[inline]
-    fn decrement(&mut self) {
+    fn decrement(&mut self) -> u32 {
+        let mut count = 0;
         // Decrement by decrementing each register
         for s in &mut self.s {
+            count += s.hi.count_ones();
             s.lo = s.hi & !s.lo;
             s.hi &= !s.lo;
         }
+        count
     }
     #[inline]
     fn count(&self) -> u32 {
@@ -207,8 +217,8 @@ impl Sketch for M256 {
         self.set(k, v);
     }
     #[inline]
-    fn decrement(&mut self) {
-        self.decrement();
+    fn decrement(&mut self) -> u32 {
+        self.decrement()
     }
     #[inline]
     fn count(&self) -> u32 {
@@ -238,8 +248,8 @@ impl Sketch for M512 {
         self.set(k, v);
     }
     #[inline]
-    fn decrement(&mut self) {
-        self.decrement();
+    fn decrement(&mut self) -> u32 {
+        self.decrement()
     }
     #[inline]
     fn count(&self) -> u32 {
@@ -269,8 +279,8 @@ impl Sketch for M1024 {
         self.set(k, v);
     }
     #[inline]
-    fn decrement(&mut self) {
-        self.decrement();
+    fn decrement(&mut self) -> u32 {
+        self.decrement()
     }
     #[inline]
     fn count(&self) -> u32 {
@@ -300,8 +310,8 @@ impl Sketch for M2048 {
         self.set(k, v);
     }
     #[inline]
-    fn decrement(&mut self) {
-        self.decrement();
+    fn decrement(&mut self) -> u32 {
+        self.decrement()
     }
     #[inline]
     fn count(&self) -> u32 {
@@ -331,8 +341,8 @@ impl Sketch for M4096 {
         self.set(k, v);
     }
     #[inline]
-    fn decrement(&mut self) {
-        self.decrement();
+    fn decrement(&mut self) -> u32 {
+        self.decrement()
     }
     #[inline]
     fn count(&self) -> u32 {
