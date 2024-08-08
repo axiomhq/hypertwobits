@@ -1,0 +1,28 @@
+[package]
+name = "hypertwobits"
+version = "0.1.0"
+edition = "2021"
+description = "HyperTwoBits cardinality estimation algorithm"
+license = "MIT OR Apache-2.0"
+authors = ["Heinz Gies <heinz@axiom.co>"]
+readme = "README.md"
+include = ["src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+repository = "https://github.com/axiomhq/hypertwobits"
+documentation = "https://docs.rs/hypertwobits/"
+
+
+[[bench]]
+name = "insert"
+harness = false
+
+[dependencies]
+ahash = "0.8.11"
+rand = { version = "0.8", optional = true }
+
+[dev-dependencies]
+criterion = "0.5.1"
+hyperbitbit = "0.0.1-alpha.2"
+hyperloglogplus = "0.4.1"
+rand = "0.8"
+
+[features]
