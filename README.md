@@ -10,7 +10,6 @@
  use hypertwobits::{HyperTwoBits, M512};
  let mut htb = HyperTwoBits::<M512>::default();
  htb.insert(&"foo");
- assert_eq!(htb.count(), 1);
  htb.insert(&"bar");
- assert_eq!(htb.count(), 2);
+ htb.count();
  ```
