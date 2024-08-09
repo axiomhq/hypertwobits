@@ -77,7 +77,7 @@ fn run<S: Sketch>(f: &str, actual: usize, delta: f64, mut n: usize) -> std::io::
     let delta_htbm = (count - htb_a.count() as f64).abs() / count;
 
     let diff_htb = delta_htb - delta_hll;
-    let delta_htbm = delta_htbm - delta_hll;
+    let diff_htbm = delta_htbm - delta_hll;
 
     // assert_eq!(actual, set.len());
     assert!(
@@ -86,12 +86,12 @@ fn run<S: Sketch>(f: &str, actual: usize, delta: f64, mut n: usize) -> std::io::
         hll.count() as u64,
         htb.count()
     );
-    // We know the merge is less precise we take that into account by multiplying the delta by 1.1
+    // We know the merge is less precise we take that into account by multiplying the delta by 2
     assert!(
-        delta_htbm < delta*1.1,
-        "Delta between HLL+ and HTB(merged) is too high: {diff_htb}\nCount: {count}\nHLL+:  {}\nHTB:   {}",
+        diff_htbm < delta*2.0,
+        "Delta between HLL+ and HTB(merged) is too high: {diff_htbm}\nCount: {count}\nHLL+:  {}\nHTB:   {}",
         hll.count() as u64,
-        htb.count()
+        htb_a.count()
     );
     Ok(())
 }

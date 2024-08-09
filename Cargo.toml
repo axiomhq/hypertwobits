@@ -15,6 +15,9 @@ documentation = "https://docs.rs/hypertwobits/"
 name = "insert"
 harness = false
 
+[[example]]
+name = "accuracy"
+
 [dependencies]
 ahash = "0.8.11"
 rand = { version = "0.8", optional = true }
@@ -23,6 +26,8 @@ rand = { version = "0.8", optional = true }
 criterion = "0.5.1"
 hyperbitbit = "0.0.1-alpha.2"
 hyperloglogplus = "0.4.1"
+itertools = "0.13.0"
 rand = "0.8"
+siphasher = "1.0.1"
 
 [features]
