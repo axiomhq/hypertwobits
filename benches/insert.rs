@@ -45,16 +45,16 @@ fn bench_ulysses(c: &mut Criterion) {
     group.bench_with_input("HyperTwoBits<64>", &lines, |b, lines| {
         let mut counter = HyperTwoBits::<M64>::default();
         b.iter(|| {
-            for line in lines.iter() {
-                counter.insert(line);
+            for line in lines.chunks_exact(4) {
+                counter.insert4(&line[0], &line[1], &line[2], &line[3]);
             }
         });
     });
     group.bench_with_input("HyperTwoBits<128>", &lines, |b, lines| {
         let mut counter = HyperTwoBits::<M128>::default();
         b.iter(|| {
-            for line in lines.iter() {
-                counter.insert(line);
+            for line in lines.chunks_exact(4) {
+                counter.insert4(&line[0], &line[1], &line[2], &line[3]);
             }
         });
     });
@@ -62,8 +62,8 @@ fn bench_ulysses(c: &mut Criterion) {
     group.bench_with_input("HyperTwoBits<265>", &lines, |b, lines| {
         let mut counter: HyperTwoBits<_> = HyperTwoBits::<M256>::default();
         b.iter(|| {
-            for line in lines.iter() {
-                counter.insert(line);
+            for line in lines.chunks_exact(4) {
+                counter.insert4(&line[0], &line[1], &line[2], &line[3]);
             }
         });
     });
@@ -71,32 +71,32 @@ fn bench_ulysses(c: &mut Criterion) {
     group.bench_with_input("HyperTwoBits<512>", &lines, |b, lines| {
         let mut counter = HyperTwoBits::<M512>::default();
         b.iter(|| {
-            for line in lines.iter() {
-                counter.insert(line);
+            for line in lines.chunks_exact(4) {
+                counter.insert4(&line[0], &line[1], &line[2], &line[3]);
             }
         });
     });
     group.bench_with_input("HyperTwoBits<1024>", &lines, |b, lines| {
         let mut counter = HyperTwoBits::<M1024>::default();
         b.iter(|| {
-            for line in lines.iter() {
-                counter.insert(line);
+            for line in lines.chunks_exact(4) {
+                counter.insert4(&line[0], &line[1], &line[2], &line[3]);
             }
         });
     });
     group.bench_with_input("HyperTwoBits<2048>", &lines, |b, lines| {
         let mut counter = HyperTwoBits::<M2048>::default();
         b.iter(|| {
-            for line in lines.iter() {
-                counter.insert(line);
+            for line in lines.chunks_exact(4) {
+                counter.insert4(&line[0], &line[1], &line[2], &line[3]);
             }
         });
     });
     group.bench_with_input("HyperTwoBits<4096>", &lines, |b, lines| {
         let mut counter = HyperTwoBits::<M4096>::default();
         b.iter(|| {
-            for line in lines.iter() {
-                counter.insert(line);
+            for line in lines.chunks_exact(4) {
+                counter.insert4(&line[0], &line[1], &line[2], &line[3]);
             }
         });
     });
