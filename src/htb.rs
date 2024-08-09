@@ -41,6 +41,45 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             t: 1,
         }
     }
+
+    /// Merges another `HyperTwoBits` counter into this one
+    pub fn merge(&mut self, mut other: Self) {
+        // The paper asks for actions if the sketch is "nearly full", this is a very loose definition
+        // we will assume 90% if substreams set is "nearly full"
+        #[allow(
+            clippy::cast_lossless,
+            clippy::cast_sign_loss,
+            clippy::cast_possible_truncation
+        )]
+        let threshold = const { (0.9 * (BITS::M as f64)) as u32 };
+        // for simplicity we ensure that `self` is always the larger sketch
+        if other.t > self.t {
+            std::mem::swap(self, &mut other);
+        }
+
+        // If the values of T differ by 8 or more, use the larger value and its sketches.
+        if self.t - other.t > 8 {
+            return;
+        }
+        // we pre-compute if self.t == other.t so we can do the decrement below before handling
+        // the other cases
+        let same = self.t == other.t;
+        // We now only have the first and third case left, so we can handle the decrement
+        if self.count >= threshold {
+            self.count = self.sketch.decrement();
+            self.t += 4;
+        }
+
+        if same {
+            // Merg sketches
+            self.sketch.merge(&other.sketch);
+        } else {
+            // merge the high bits of other into the low bits of self
+            self.sketch.merge_high_into_lo(&other.sketch);
+        }
+        // update the count
+        self.count = self.sketch.count();
+    }
     #[inline]
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     /// Inserts a value into the counter

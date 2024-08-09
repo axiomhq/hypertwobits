@@ -19,6 +19,12 @@ pub trait Sketch: Default {
     fn decrement(&mut self) -> u32;
     /// Returns the number of active sub streams in the sketch
     fn count(&self) -> u32;
+    /// Merges the sketch with another sketch by oring the values
+    fn merge(&mut self, other: &Self);
+    /// Merges sketches that differ in T by the following rules:
+    /// - self.lo = self.lo | other.hi
+    /// - self.hi remains unchanged
+    fn merge_high_into_lo(&mut self, other: &Self);
 }
 
 /// M = 64, using two 64 bit integers to store the sketch
@@ -68,6 +74,16 @@ impl Sketch for M64 {
         let d = self.hi | self.lo;
         d.count_ones()
     }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        self.hi |= other.hi;
+        self.lo |= other.lo;
+    }
+
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        self.lo |= other.hi;
+    }
 }
 
 /// M = 128, using two 128 bit integers to store the sketch
@@ -116,6 +132,15 @@ impl Sketch for M128 {
     fn count(&self) -> u32 {
         let d = self.hi | self.lo;
         d.count_ones()
+    }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        self.hi |= other.hi;
+        self.lo |= other.lo;
+    }
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        self.lo |= other.hi;
     }
 }
 
@@ -193,6 +218,21 @@ impl<const REGISTERS: usize> M128Reg<REGISTERS> {
         }
         r
     }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        // Merge by merging each register
+        for (a, b) in self.s.iter_mut().zip(other.s.iter()) {
+            a.hi |= b.hi;
+            a.lo |= b.lo;
+        }
+    }
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        // Merge by merging each register
+        for (a, b) in self.s.iter_mut().zip(other.s.iter()) {
+            a.lo |= b.hi;
+        }
+    }
 }
 
 /// M = 256 Sketch Implementation
@@ -223,6 +263,14 @@ impl Sketch for M256 {
     #[inline]
     fn count(&self) -> u32 {
         self.count()
+    }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        self.merge(other);
+    }
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        self.merge_high_into_lo(other);
     }
 }
 
@@ -255,6 +303,14 @@ impl Sketch for M512 {
     fn count(&self) -> u32 {
         self.count()
     }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        self.merge(other);
+    }
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        self.merge_high_into_lo(other);
+    }
 }
 
 /// M = 1024 Sketch Implementation
@@ -285,6 +341,14 @@ impl Sketch for M1024 {
     #[inline]
     fn count(&self) -> u32 {
         self.count()
+    }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        self.merge(other);
+    }
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        self.merge_high_into_lo(other);
     }
 }
 
@@ -317,6 +381,14 @@ impl Sketch for M2048 {
     fn count(&self) -> u32 {
         self.count()
     }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        self.merge(other);
+    }
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        self.merge_high_into_lo(other);
+    }
 }
 
 /// M = 4096 Sketch Implementation
@@ -347,6 +419,14 @@ impl Sketch for M4096 {
     #[inline]
     fn count(&self) -> u32 {
         self.count()
+    }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        self.merge(other);
+    }
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        self.merge_high_into_lo(other);
     }
 }
 
