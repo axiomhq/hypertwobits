@@ -42,20 +42,19 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
         }
     }
     #[inline]
-    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     /// Inserts a value into the counter
     pub fn insert<V: std::hash::Hash>(&mut self, v: &V) {
+        let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
         let mut x = HASH::default();
         v.hash(&mut x);
         let x = x.finish();
         // use most significant bits for k the rest for x
         let k: u32 = (x >> BITS::K_SHIFT) as u32;
         let x: u64 = x & BITS::X_MASK;
-        let mut count_changed = false;
 
         if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
             self.count += 1;
-            count_changed = true;
             self.sketch.set(k, 1);
         }
         // 2^4
@@ -68,18 +67,18 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             self.sketch.set(k, 3);
         }
 
-        if count_changed && f64::from(self.count) >= Self::ALPHA * f64::from(BITS::M) {
+        if self.count >= threshold {
             self.count = self.sketch.decrement();
             self.t += 4;
         }
     }
 
     #[inline]
-    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     /// Inserts 2 elements into the counter for micro batching purposes, note this will delay
     /// the count update to the end
     pub fn insert2<V: std::hash::Hash>(&mut self, v1: &V, v2: &V) {
-        let mut count_changed = false;
+        let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
 
         let mut x = HASH::default();
         v1.hash(&mut x);
@@ -90,7 +89,6 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
 
         if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
             self.count += 1;
-            count_changed = true;
             self.sketch.set(k, 1);
         }
         // 2^4
@@ -112,7 +110,6 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
 
         if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
             self.count += 1;
-            count_changed = true;
             self.sketch.set(k, 1);
         }
         // 2^4
@@ -125,97 +122,18 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             self.sketch.set(k, 3);
         }
 
-        if count_changed && f64::from(self.count) >= Self::ALPHA * f64::from(BITS::M) {
+        if self.count >= threshold {
             self.count = self.sketch.decrement();
             self.t += 4;
         }
     }
 
     #[inline]
-    #[allow(clippy::cast_possible_truncation)]
-    /// Inserts 3 elements into the counter for micro batching purposes, note this will delay
-    /// the count update to the end
-    pub fn insert3<V: std::hash::Hash>(&mut self, v1: &V, v2: &V, v3: &V) {
-        let mut count_changed = false;
-
-        let mut x = HASH::default();
-        v1.hash(&mut x);
-        let x = x.finish();
-        // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
-
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
-            self.count += 1;
-            count_changed = true;
-            self.sketch.set(k, 1);
-        }
-        // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
-        }
-
-        // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
-        }
-
-        let mut x = HASH::default();
-        v2.hash(&mut x);
-        let x = x.finish();
-        // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
-
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
-            self.count += 1;
-            count_changed = true;
-            self.sketch.set(k, 1);
-        }
-        // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
-        }
-
-        // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
-        }
-
-        let mut x = HASH::default();
-        v3.hash(&mut x);
-        let x = x.finish();
-        // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
-
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
-            self.count += 1;
-            count_changed = true;
-            self.sketch.set(k, 1);
-        }
-        // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
-        }
-
-        // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
-        }
-
-        if count_changed && f64::from(self.count) >= Self::ALPHA * f64::from(BITS::M) {
-            self.count = self.sketch.decrement();
-            self.t += 4;
-        }
-    }
-
-    #[inline]
-    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     /// Inserts 4 elements into the counter for micro batching purposes, note this will delay
     /// the count update to the end
     pub fn insert4<V: std::hash::Hash>(&mut self, v1: &V, v2: &V, v3: &V, v4: &V) {
-        let mut count_changed = false;
+        let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
 
         let mut x = HASH::default();
         v1.hash(&mut x);
@@ -226,7 +144,6 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
 
         if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
             self.count += 1;
-            count_changed = true;
             self.sketch.set(k, 1);
         }
         // 2^4
@@ -248,7 +165,6 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
 
         if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
             self.count += 1;
-            count_changed = true;
             self.sketch.set(k, 1);
         }
         // 2^4
@@ -270,7 +186,6 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
 
         if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
             self.count += 1;
-            count_changed = true;
             self.sketch.set(k, 1);
         }
         // 2^4
@@ -292,7 +207,6 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
 
         if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
             self.count += 1;
-            count_changed = true;
             self.sketch.set(k, 1);
         }
         // 2^4
@@ -305,7 +219,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             self.sketch.set(k, 3);
         }
 
-        if count_changed && f64::from(self.count) >= Self::ALPHA * f64::from(BITS::M) {
+        if self.count >= threshold {
             self.count = self.sketch.decrement();
             self.t += 4;
         }
