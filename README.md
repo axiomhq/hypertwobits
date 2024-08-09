@@ -1,7 +1,7 @@
 [![docs.rs](https://docs.rs/hypertwobits/badge.svg)](https://docs.rs/hypertwobits/)
-[![build](https://img.shields.io/github/actions/workflow/status/axiomhq/hypertwobits/rust.yaml?branch=main&ghcache=unused)](https://github.com/axiomhq/hypertwobits/actions?query=workflow%3Abuild)
+[![Rust](https://github.com/axiomhq/hypertwobits/actions/workflows/rust.yml/badge.svg)](https://github.com/axiomhq/hypertwobits/actions/workflows/rust.yml)
 [![crates.io](https://img.shields.io/crates/v/hypertwobits.svg)](https://crates.io/crates/hypertwobits)
-[![License](https://img.shields.io/crates/l/hypertwobits)](LICENSE-APACHE)
+[![License](https://img.shields.io/crates/l/hypertwobits)](LICENSE-MIT)
 
 
 [`HyperTwoBits`](https://www2.math.uu.se/~svantejs/papers/sj383-aofa.pdf) is a probabilistic data structure
