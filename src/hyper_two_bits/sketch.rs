@@ -430,6 +430,45 @@ impl Sketch for M4096 {
     }
 }
 
+/// M = 4096 Sketch Implementation
+pub type M8192 = M128Reg<64>;
+
+impl Sketch for M8192 {
+    const M: u32 = 4096;
+    const X_MASK: u64 =
+        0b0000_0000_0000_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
+    const K_SHIFT: u32 = 52;
+
+    #[inline]
+    fn val(&self, k: u32) -> u8 {
+        debug_assert!(k < Self::M);
+        self.val(k)
+    }
+
+    #[inline]
+    fn set(&mut self, k: u32, v: u8) {
+        debug_assert!(k < Self::M);
+        debug_assert!(v < 4);
+        self.set(k, v);
+    }
+    #[inline]
+    fn decrement(&mut self) -> u32 {
+        self.decrement()
+    }
+    #[inline]
+    fn count(&self) -> u32 {
+        self.count()
+    }
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        self.merge(other);
+    }
+    #[inline]
+    fn merge_high_into_lo(&mut self, other: &Self) {
+        self.merge_high_into_lo(other);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
