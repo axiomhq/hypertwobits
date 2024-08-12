@@ -25,6 +25,15 @@ fn bench_ulysses(c: &mut Criterion) {
         });
     });
 
+    group.bench_with_input("HyperLogLog", &lines, |b, lines| {
+        let mut counter = hyperloglog::HyperLogLog::new(0.00408);
+        b.iter(|| {
+            for line in lines.iter() {
+                counter.insert(&line.as_bytes());
+            }
+        });
+    });
+
     group.bench_with_input("HyperBitBit", &lines, |b, lines| {
         let mut counter = HyperBitBit::new();
         b.iter(|| {

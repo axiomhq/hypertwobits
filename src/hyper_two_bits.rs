@@ -2,18 +2,71 @@ pub(super) mod sketch;
 #[cfg(test)]
 mod tests;
 
-use std::hash::Hasher;
+use std::hash::{BuildHasher, BuildHasherDefault, Hasher};
 
 use sketch::Sketch;
 
 use crate::M256;
 
+/// Random Seeded `AHasher` Builder that allows for seeded hashing per `HyperTwoBit` isnstance
+pub struct AHasherBuilder {
+    state: u64,
+}
+
+impl Default for AHasherBuilder {
+    fn default() -> Self {
+        Self {
+            state: rand::random(),
+        }
+    }
+}
+
+impl BuildHasher for AHasherBuilder {
+    type Hasher = ahash::AHasher;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        let mut h = ahash::AHasher::default();
+        h.write_u64(self.state);
+        h
+    }
+}
+
+/// Non seeded `AHasher` Builder that is fater but will create completely predictable results
+pub type AHasherDefaultBuilder = BuildHasherDefault<ahash::AHasher>;
+
+/// Random Seeded `SipHasher13` Builder
+#[cfg(feature = "siphash")]
+pub struct SipHasher13Builder {
+    state: u64,
+}
+#[cfg(feature = "siphash")]
+impl Default for SipHasher13Builder {
+    fn default() -> Self {
+        Self {
+            state: rand::random(),
+        }
+    }
+}
+#[cfg(feature = "siphash")]
+impl BuildHasher for SipHasher13Builder {
+    type Hasher = siphasher::sip::SipHasher13;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        let mut h = siphasher::sip::SipHasher13::default();
+        h.write_u64(self.state);
+        h
+    }
+}
+#[cfg(feature = "siphash")]
+/// Non seeded `SipHasher13` Builder that is fater but will create completely predictable results
+pub type SipHasher13DefaultBuilder = BuildHasherDefault<siphasher::sip::SipHasher13>;
+
 /// `HyperTwoBits` implementation that is fully stack allocated and generic to avoid branches for
 /// different numbers of sub streams.
 ///
-/// Both the hasher and the sub stream size siaz can be customized, by default it uses `ahash` and `M256`
-pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: Hasher + Default = ahash::AHasher> {
-    _hash: std::marker::PhantomData<HASH>,
+/// Both the hasher and the sub stream size siaz can be customized, by default it uses `AHasherBuilder` and `M256`
+pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: BuildHasher = AHasherBuilder> {
+    hash: HASH,
     sketch: SKETCH,
     count: u32,
     t: u32,
@@ -22,7 +75,7 @@ pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: Hasher + Default = ahash::A
 impl<SKETCH: Sketch> Default for HyperTwoBits<SKETCH> {
     fn default() -> Self {
         Self {
-            _hash: std::marker::PhantomData,
+            hash: AHasherBuilder::default(),
             sketch: SKETCH::default(),
             count: 0,
             t: 1,
@@ -30,14 +83,14 @@ impl<SKETCH: Sketch> Default for HyperTwoBits<SKETCH> {
     }
 }
 
-impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
+impl<HASH: BuildHasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     const ALPHA: f64 = 0.988;
     #[must_use]
     /// Creates a new `HyperTwoBits` counter with specified hasher and bitset,
     /// use `HyperTwoBits::default()` for default values.
     pub fn new() -> Self {
         Self {
-            _hash: std::marker::PhantomData,
+            hash: HASH::default(),
             sketch: BITS::default(),
             count: 0,
             t: 1,
@@ -87,9 +140,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     /// Inserts a value into the counter
     pub fn insert<V: std::hash::Hash>(&mut self, v: &V) {
         let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
-        let mut x = HASH::default();
-        v.hash(&mut x);
-        let x = x.finish();
+        let x = self.hash.hash_one(v);
         // use most significant bits for k the rest for x
         let k: u32 = (x >> BITS::K_SHIFT) as u32;
         let x: u64 = x & BITS::X_MASK;
@@ -121,9 +172,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     pub fn insert2<V: std::hash::Hash>(&mut self, v1: &V, v2: &V) {
         let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
 
-        let mut x = HASH::default();
-        v1.hash(&mut x);
-        let x = x.finish();
+        let x = self.hash.hash_one(v1);
         // use most significant bits for k the rest for x
         let k: u32 = (x >> BITS::K_SHIFT) as u32;
         let x: u64 = x & BITS::X_MASK;
@@ -142,9 +191,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             self.sketch.set(k, 3);
         }
 
-        let mut x = HASH::default();
-        v2.hash(&mut x);
-        let x = x.finish();
+        let x = self.hash.hash_one(v2);
         // use most significant bits for k the rest for x
         let k: u32 = (x >> BITS::K_SHIFT) as u32;
         let x: u64 = x & BITS::X_MASK;
@@ -176,9 +223,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     pub fn insert4<V: std::hash::Hash>(&mut self, v1: &V, v2: &V, v3: &V, v4: &V) {
         let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
 
-        let mut x = HASH::default();
-        v1.hash(&mut x);
-        let x = x.finish();
+        let x = self.hash.hash_one(v1);
         // use most significant bits for k the rest for x
         let k: u32 = (x >> BITS::K_SHIFT) as u32;
         let x: u64 = x & BITS::X_MASK;
@@ -197,9 +242,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             self.sketch.set(k, 3);
         }
 
-        let mut x = HASH::default();
-        v2.hash(&mut x);
-        let x = x.finish();
+        let x = self.hash.hash_one(v2);
         // use most significant bits for k the rest for x
         let k: u32 = (x >> BITS::K_SHIFT) as u32;
         let x: u64 = x & BITS::X_MASK;
@@ -218,9 +261,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             self.sketch.set(k, 3);
         }
 
-        let mut x = HASH::default();
-        v3.hash(&mut x);
-        let x = x.finish();
+        let x = self.hash.hash_one(v3);
         // use most significant bits for k the rest for x
         let k: u32 = (x >> BITS::K_SHIFT) as u32;
         let x: u64 = x & BITS::X_MASK;
@@ -239,9 +280,7 @@ impl<HASH: Hasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             self.sketch.set(k, 3);
         }
 
-        let mut x = HASH::default();
-        v4.hash(&mut x);
-        let x = x.finish();
+        let x = self.hash.hash_one(v4);
         // use most significant bits for k the rest for x
         let k: u32 = (x >> BITS::K_SHIFT) as u32;
         let x: u64 = x & BITS::X_MASK;
