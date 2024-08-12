@@ -65,7 +65,7 @@ pub type SipHasher13DefaultBuilder = BuildHasherDefault<siphasher::sip::SipHashe
 /// different numbers of sub streams.
 ///
 /// Both the hasher and the sub stream size siaz can be customized, by default it uses `AHasherBuilder` and `M256`
-pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: BuildHasher = AHasherBuilder> {
+pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: BuildHasher = AHasherDefaultBuilder> {
     hash: HASH,
     sketch: SKETCH,
     count: u32,
@@ -75,7 +75,7 @@ pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: BuildHasher = AHasherBuilde
 impl<SKETCH: Sketch> Default for HyperTwoBits<SKETCH> {
     fn default() -> Self {
         Self {
-            hash: AHasherBuilder::default(),
+            hash: AHasherDefaultBuilder::default(),
             sketch: SKETCH::default(),
             count: 0,
             t: 1,
@@ -98,7 +98,14 @@ impl<HASH: BuildHasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     }
 
     /// Merges another `HyperTwoBits` counter into this one
+    /// # Panics
+    /// If hasheres are seeded as that prevents merging
     pub fn merge(&mut self, mut other: Self) {
+        assert_eq!(
+            self.hash.hash_one(42),
+            other.hash.hash_one(42),
+            "Hashers must be the same, can not merge"
+        );
         // The paper asks for actions if the sketch is "nearly full", this is a very loose definition
         // we will assume 99% if substreams set is "nearly full"
         #[allow(
