@@ -1,11 +1,8 @@
-use crate::{HyperTwoBits, Sketch, M2048};
+use crate::{HyperTwoBits, Sketch, M4096};
 
-use std::{
-    hash::RandomState,
-    io::{BufRead, BufReader},
-};
+use std::io::{BufRead, BufReader};
 
-use hyperloglogplus::{HyperLogLog as _, HyperLogLogPlus};
+use hyperloglog::HyperLogLog;
 
 #[test]
 fn htb64_size() {
@@ -47,8 +44,7 @@ fn run<S: Sketch>(f: &str, actual: usize, delta: f64, mut n: usize) -> std::io::
     let mut htb_a: HyperTwoBits<S> = HyperTwoBits::<S>::new();
     let mut htb_b: HyperTwoBits<S> = HyperTwoBits::<S>::new();
 
-    let mut hll: HyperLogLogPlus<[u8], RandomState> =
-        HyperLogLogPlus::new(16, RandomState::new()).unwrap();
+    let mut hll: HyperLogLog = HyperLogLog::new(0.00408);
     // let mut set = std::collections::HashSet::new();
 
     let buf = BufReader::new(std::fs::File::open(f)?);
@@ -65,14 +61,14 @@ fn run<S: Sketch>(f: &str, actual: usize, delta: f64, mut n: usize) -> std::io::
         }
         let s = line.as_bytes();
         htb.insert(&s);
-        hll.insert(s);
+        hll.insert(&s);
         // set.insert(line);
     }
 
     htb_a.merge(htb_b);
 
     let count = actual as f64;
-    let delta_hll = (count - hll.count()).abs() / count;
+    let delta_hll = (count - hll.len()).abs() / count;
     let delta_htb = (count - htb.count() as f64).abs() / count;
     let delta_htbm = (count - htb_a.count() as f64).abs() / count;
 
@@ -82,25 +78,24 @@ fn run<S: Sketch>(f: &str, actual: usize, delta: f64, mut n: usize) -> std::io::
     // assert_eq!(actual, set.len());
     assert!(
         delta_htb < delta,
-        "Delta between HLL+ and HTB is too high: {diff_htb}\nCount: {count}\nHLL+:  {}\nHTB:   {}",
-        hll.count() as u64,
+        "Delta between HLL and HTB is too high: {diff_htb}\nCount: {count}\nHLL+:  {}\nHTB:   {}",
+        hll.len() as u64,
         htb.count()
     );
     // We know the merge is less precise we take that into account by multiplying the delta by 2
     assert!(
         delta_htbm < delta*2.0,
-        "Delta between HLL+ and HTB(merged) is too high: {diff_htbm}\nCount: {count}\nHLL+:  {}\nHTB:   {}",
-        hll.count() as u64,
+        "Delta between HLL and HTB(merged) is too high: {diff_htbm}\nCount: {count}\nHLL+:  {}\nHTB:   {}",
+        hll.len() as u64,
         htb_a.count()
     );
     Ok(())
 }
 
 fn test_all(f: &str, actual: usize, delta: f64, n: usize) -> std::io::Result<()> {
-    // we only test M2048 for now to sazve time when running tests
-    // it's the medium tradeoff between space and precision, for HLL we use precision of 16
-    // from a range 4 and 18
-    run::<M2048>(f, actual, delta, n)?;
+    // we only test M4096 for now to sazve time when running tests
+    // it's the medium tradeoff between space and precision, for HLL we use error rate of 0.00408
+    run::<M4096>(f, actual, delta, n)?;
     Ok(())
 }
 #[test]
