@@ -19,6 +19,7 @@ name = "accuracy"
 
 [dependencies]
 ahash = "0.8.11"
+mem_dbg = {version="0.2.4", optional=true}
 rand = { version = "0.8" }
 siphasher = { version = "1", optional = true }
 
