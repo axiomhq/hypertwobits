@@ -10,7 +10,6 @@ include = ["src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 repository = "https://github.com/axiomhq/hypertwobits"
 documentation = "https://docs.rs/hypertwobits/"
 
-
 [[bench]]
 name = "insert"
 harness = false

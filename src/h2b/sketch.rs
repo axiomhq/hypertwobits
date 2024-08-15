@@ -477,12 +477,11 @@ mod tests {
         let mut s = S::default();
         for i in 0..S::M {
             assert_eq!(s.val(i), 0);
-            s.set(i, 1);
-            assert_eq!(s.val(i), 1);
-            s.set(i, 2);
-            assert_eq!(s.val(i), 2);
-            s.set(i, 3);
-            assert_eq!(s.val(i), 3);
+
+            for r in 1..=3 {
+                s.set(i, r);
+                assert_eq!(s.val(i), r);
+            }
             for j in 0..S::M {
                 if j == i {
                     assert_eq!(s.val(j), 3);
@@ -497,17 +496,11 @@ mod tests {
             s.set(i, 3);
             assert_eq!(s.val(i), 3);
         }
-        s.decrement();
-        for i in 0..S::M {
-            assert_eq!(s.val(i), 2);
-        }
-        s.decrement();
-        for i in 0..S::M {
-            assert_eq!(s.val(i), 1);
-        }
-        s.decrement();
-        for i in 0..S::M {
-            assert_eq!(s.val(i), 0);
+        for r in (0..=2).rev() {
+            s.decrement();
+            for i in 0..S::M {
+                assert_eq!(s.val(i), r);
+            }
         }
         s.decrement();
         for i in 0..S::M {

@@ -1,4 +1,4 @@
-use crate::{HyperTwoBits, Sketch, M4096};
+use super::{HyperTwoBits, Sketch, M4096};
 
 use std::io::{BufRead, BufReader};
 
@@ -6,31 +6,31 @@ use hyperloglog::HyperLogLog;
 
 #[test]
 fn htb64_size() {
-    assert_eq!(std::mem::size_of::<HyperTwoBits<crate::M64>>(), 24);
+    assert_eq!(std::mem::size_of::<HyperTwoBits<super::M64>>(), 24);
 }
 #[test]
 fn htb128_size() {
-    assert_eq!(std::mem::size_of::<HyperTwoBits<crate::M128>>(), 48);
+    assert_eq!(std::mem::size_of::<HyperTwoBits<super::M128>>(), 48);
 }
 #[test]
 fn htb256_size() {
-    assert_eq!(std::mem::size_of::<HyperTwoBits<crate::M256>>(), 80);
+    assert_eq!(std::mem::size_of::<HyperTwoBits<super::M256>>(), 80);
 }
 #[test]
 fn htb512_size() {
-    assert_eq!(std::mem::size_of::<HyperTwoBits<crate::M512>>(), 144);
+    assert_eq!(std::mem::size_of::<HyperTwoBits<super::M512>>(), 144);
 }
 #[test]
 fn htb1024_size() {
-    assert_eq!(std::mem::size_of::<HyperTwoBits<crate::M1024>>(), 272);
+    assert_eq!(std::mem::size_of::<HyperTwoBits<super::M1024>>(), 272);
 }
 #[test]
 fn htb2048_size() {
-    assert_eq!(std::mem::size_of::<HyperTwoBits<crate::M2048>>(), 528);
+    assert_eq!(std::mem::size_of::<HyperTwoBits<super::M2048>>(), 528);
 }
 #[test]
 fn htb4096_size() {
-    assert_eq!(std::mem::size_of::<HyperTwoBits<crate::M4096>>(), 1040);
+    assert_eq!(std::mem::size_of::<HyperTwoBits<super::M4096>>(), 1040);
 }
 
 #[allow(

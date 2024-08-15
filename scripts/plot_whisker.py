@@ -40,7 +40,7 @@ if args.sort_by == 'median':
     labels = [labels[i] for i in indices]
     counts = [counts[i] for i in indices]
 
-plt.figure(figsize=(40, 20), constrained_layout=True)
+plt.figure(figsize=(24, 24), constrained_layout=True)
 boxplot = plt.boxplot(counts, vert=True, patch_artist=True)
 cmap = plt.get_cmap("rainbow")
 colors = [cmap(val / len(counts)) for val in range(len(counts))]
