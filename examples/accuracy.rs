@@ -105,7 +105,7 @@ fn hll(results: &mut Vec<Resultset>, n: usize, data: &[String]) {
     results.push(r);
 }
 
-fn htb<BITS: Sketch, HASH: BuildHasher + Default>(
+fn h2b<BITS: h2b::Sketch, HASH: BuildHasher + Default>(
     algo: &'static str,
     results: &mut Vec<Resultset>,
     n: usize,
@@ -113,7 +113,32 @@ fn htb<BITS: Sketch, HASH: BuildHasher + Default>(
 ) {
     let mut r = Resultset::new(algo, n);
     for _ in 0..n {
-        let mut counter: HyperTwoBits<BITS, HASH> = HyperTwoBits::new();
+        let mut counter: h2b::HyperTwoBits<BITS, HASH> = h2b::HyperTwoBits::new();
+        for (i, w) in data.iter().enumerate() {
+            counter.insert(w);
+            match i {
+                100 => r.results_100.push(counter.count()),
+                1_000 => r.results_1_000.push(counter.count()),
+                10_000 => r.results_10_000.push(counter.count()),
+                100_000 => r.results_100_000.push(counter.count()),
+                _ => {}
+            }
+            r.total += 1;
+        }
+        r.results_all.push(counter.count());
+    }
+    r.finalize();
+    results.push(r);
+}
+fn h3b<BITS: h3b::Sketch, HASH: BuildHasher + Default>(
+    algo: &'static str,
+    results: &mut Vec<Resultset>,
+    n: usize,
+    data: &[String],
+) {
+    let mut r = Resultset::new(algo, n);
+    for _ in 0..n {
+        let mut counter: h3b::HyperThreeBits<BITS, HASH> = h3b::HyperThreeBits::new();
         for (i, w) in data.iter().enumerate() {
             counter.insert(w);
             match i {
@@ -194,6 +219,7 @@ struct Inputs {
     ulysses: Vec<Resultset>,
     shakespeare: Vec<Resultset>,
     war_and_peace: Vec<Resultset>,
+    combined: Vec<Resultset>,
 }
 
 fn run(data: &[String], results: &mut Vec<Resultset>, n: usize) {
@@ -215,10 +241,19 @@ fn run(data: &[String], results: &mut Vec<Resultset>, n: usize) {
 
     hllp(results, n, data);
     hll(results, n, data);
-    htb!(
+    h2b!(
         results, n, data;
-        AHasherBuilder, RandomState, SipHasher13Builder;
-        M64, M128, M256, M512, M1024, M2048, M4096, M8192
+        // AHasherBuilder, RandomState, SipHasher13Builder;
+        AHasherBuilder;
+        // M64, M128, M256, M512, M1024, M2048, M4096
+        M4096
+    );
+    h3b!(
+        results, n, data;
+        // AHasherBuilder, RandomState, SipHasher13Builder;
+        AHasherBuilder;
+        // M64, M128, M256, M512, M1024, M2048, M4096
+        M4096
     );
 }
 
@@ -238,6 +273,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         .lines()
         .collect::<Result<Vec<String>, _>>()?;
 
+    let combined = ulysses
+        .iter()
+        .chain(shakespeare.iter())
+        .chain(war_and_peace.iter())
+        .cloned()
+        .collect::<Vec<_>>();
+
     let r_u = std::thread::spawn(move || {
         let mut results = Vec::new();
         run(&ulysses, &mut results, n);
@@ -253,10 +295,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         run(&war_and_peace, &mut results, n);
         results
     });
+    let r_c = std::thread::spawn(move || {
+        let mut results = Vec::new();
+        run(&combined, &mut results, n);
+        results
+    });
     let results = Inputs {
         ulysses: r_u.join().unwrap(),
         shakespeare: r_s.join().unwrap(),
         war_and_peace: r_w.join().unwrap(),
+        combined: r_c.join().unwrap(),
     };
 
     let outputs_ulysses = results
@@ -274,10 +322,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         .into_iter()
         .map(JsonResults::from)
         .collect::<Vec<_>>();
+    let outputs_combined = results
+        .combined
+        .into_iter()
+        .map(JsonResults::from)
+        .collect::<Vec<_>>();
 
     write_json("ulysses", &outputs_ulysses)?;
     write_json("shakespeare", &outputs_shakespear)?;
     write_json("war_and_peace", &outputs_war_and_peace)?;
+    write_json("combined", &outputs_combined)?;
 
     Ok(())
 }
@@ -317,16 +371,31 @@ fn write_json(name: &str, outputs: &[JsonResults]) -> Result<(), Box<dyn Error>>
 }
 
 #[macro_export]
-macro_rules! htb {
+macro_rules! h2b {
     ( $results:expr, $n:expr, $data:expr; $( $hash:tt ),*; $( $m:tt ),* ) => {
-        htb!(@call_hash  $results, $n, $data; $($hash),*; @ ($($m),*))
+        h2b!(@call_hash  $results, $n, $data; $($hash),*; @ ($($m),*))
     };
     (@call_hash $results:expr, $n:expr, $data:expr; $( $hash:tt ),*; @ $ms:tt) => {
-        $(htb!(@call $results, $n, $data; $hash; $ms));*
+        $(h2b!(@call $results, $n, $data; $hash; $ms));*
     };
     (@call $results:expr, $n:expr, $data:expr; $hash:tt; ($($m:tt),*)) => {
         $(
-        htb::<$m, $hash>(concat!("HyperTwoBits<", stringify!($m), " + ", stringify!($hash),">"), $results, $n, $data)
+        h2b::<h2b::$m, $hash>(concat!("HyperTwoBits<", stringify!($m), " + ", stringify!($hash),">"), $results, $n, $data)
+        );*
+    };
+}
+
+#[macro_export]
+macro_rules! h3b {
+    ( $results:expr, $n:expr, $data:expr; $( $hash:tt ),*; $( $m:tt ),* ) => {
+        h3b!(@call_hash  $results, $n, $data; $($hash),*; @ ($($m),*))
+    };
+    (@call_hash $results:expr, $n:expr, $data:expr; $( $hash:tt ),*; @ $ms:tt) => {
+        $(h3b!(@call $results, $n, $data; $hash; $ms));*
+    };
+    (@call $results:expr, $n:expr, $data:expr; $hash:tt; ($($m:tt),*)) => {
+        $(
+        h3b::<h3b::$m, $hash>(concat!("HyperThreeBits<", stringify!($m), " + ", stringify!($hash),">"), $results, $n, $data)
         );*
     };
 }

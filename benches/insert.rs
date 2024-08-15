@@ -3,7 +3,11 @@ use std::{hash::RandomState, io::BufRead as _};
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use hyperbitbit::HyperBitBit;
 use hyperloglogplus::{HyperLogLog as _, HyperLogLogPlus};
-use hypertwobits::{HyperBitBit64, HyperTwoBits, M1024, M128, M2048, M256, M4096, M512, M64};
+use hypertwobits::{
+    h2b::{self, HyperTwoBits},
+    h3b::{self, HyperThreeBits},
+    HyperBitBit64,
+};
 
 fn bench_ulysses(c: &mut Criterion) {
     let path = "data/Ulysses.csv";
@@ -52,7 +56,7 @@ fn bench_ulysses(c: &mut Criterion) {
         });
     });
     group.bench_with_input("HyperTwoBits<64>", &lines, |b, lines| {
-        let mut counter = HyperTwoBits::<M64>::default();
+        let mut counter = HyperTwoBits::<h2b::M64>::default();
         b.iter(|| {
             // for line in lines.chunks_exact(4) {
             //     counter.insert4(&line[0], &line[1], &line[2], &line[3]);
@@ -63,7 +67,7 @@ fn bench_ulysses(c: &mut Criterion) {
         });
     });
     group.bench_with_input("HyperTwoBits<128>", &lines, |b, lines| {
-        let mut counter = HyperTwoBits::<M128>::default();
+        let mut counter = HyperTwoBits::<h2b::M128>::default();
         b.iter(|| {
             // for line in lines.chunks_exact(4) {
             //     counter.insert4(&line[0], &line[1], &line[2], &line[3]);
@@ -75,7 +79,7 @@ fn bench_ulysses(c: &mut Criterion) {
     });
 
     group.bench_with_input("HyperTwoBits<265>", &lines, |b, lines| {
-        let mut counter: HyperTwoBits<_> = HyperTwoBits::<M256>::default();
+        let mut counter: HyperTwoBits<_> = HyperTwoBits::<h2b::M256>::default();
         b.iter(|| {
             // for line in lines.chunks_exact(4) {
             //     counter.insert4(&line[0], &line[1], &line[2], &line[3]);
@@ -87,7 +91,7 @@ fn bench_ulysses(c: &mut Criterion) {
     });
 
     group.bench_with_input("HyperTwoBits<512>", &lines, |b, lines| {
-        let mut counter = HyperTwoBits::<M512>::default();
+        let mut counter = HyperTwoBits::<h2b::M512>::default();
         b.iter(|| {
             // for line in lines.chunks_exact(4) {
             //     counter.insert4(&line[0], &line[1], &line[2], &line[3]);
@@ -98,7 +102,7 @@ fn bench_ulysses(c: &mut Criterion) {
         });
     });
     group.bench_with_input("HyperTwoBits<1024>", &lines, |b, lines| {
-        let mut counter = HyperTwoBits::<M1024>::default();
+        let mut counter = HyperTwoBits::<h2b::M1024>::default();
         b.iter(|| {
             // for line in lines.chunks_exact(4) {
             //     counter.insert4(&line[0], &line[1], &line[2], &line[3]);
@@ -109,7 +113,7 @@ fn bench_ulysses(c: &mut Criterion) {
         });
     });
     group.bench_with_input("HyperTwoBits<2048>", &lines, |b, lines| {
-        let mut counter = HyperTwoBits::<M2048>::default();
+        let mut counter = HyperTwoBits::<h2b::M2048>::default();
         b.iter(|| {
             // for line in lines.chunks_exact(4) {
             //     counter.insert4(&line[0], &line[1], &line[2], &line[3]);
@@ -120,11 +124,67 @@ fn bench_ulysses(c: &mut Criterion) {
         });
     });
     group.bench_with_input("HyperTwoBits<4096>", &lines, |b, lines| {
-        let mut counter = HyperTwoBits::<M4096>::default();
+        let mut counter = HyperTwoBits::<h2b::M4096>::default();
         b.iter(|| {
             // for line in lines.chunks_exact(4) {
             //     counter.insert4(&line[0], &line[1], &line[2], &line[3]);
             // }
+            for line in lines {
+                counter.insert(line);
+            }
+        });
+    });
+    group.bench_with_input("HyperThreeBits<64>", &lines, |b, lines| {
+        let mut counter = HyperThreeBits::<h3b::M64>::default();
+        b.iter(|| {
+            for line in lines {
+                counter.insert(line);
+            }
+        });
+    });
+    group.bench_with_input("HyperThreeBits<128>", &lines, |b, lines| {
+        let mut counter = HyperThreeBits::<h3b::M128>::default();
+        b.iter(|| {
+            for line in lines {
+                counter.insert(line);
+            }
+        });
+    });
+    group.bench_with_input("HyperThreeBits<256>", &lines, |b, lines| {
+        let mut counter = HyperThreeBits::<h3b::M256>::default();
+        b.iter(|| {
+            for line in lines {
+                counter.insert(line);
+            }
+        });
+    });
+    group.bench_with_input("HyperThreeBits<512>", &lines, |b, lines| {
+        let mut counter = HyperThreeBits::<h3b::M512>::default();
+        b.iter(|| {
+            for line in lines {
+                counter.insert(line);
+            }
+        });
+    });
+    group.bench_with_input("HyperThreeBits<1024>", &lines, |b, lines| {
+        let mut counter = HyperThreeBits::<h3b::M1024>::default();
+        b.iter(|| {
+            for line in lines {
+                counter.insert(line);
+            }
+        });
+    });
+    group.bench_with_input("HyperThreeBits<2048>", &lines, |b, lines| {
+        let mut counter = HyperThreeBits::<h3b::M2048>::default();
+        b.iter(|| {
+            for line in lines {
+                counter.insert(line);
+            }
+        });
+    });
+    group.bench_with_input("HyperThreeBits<4096>", &lines, |b, lines| {
+        let mut counter = HyperThreeBits::<h3b::M4096>::default();
+        b.iter(|| {
             for line in lines {
                 counter.insert(line);
             }

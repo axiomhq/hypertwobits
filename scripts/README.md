@@ -5,7 +5,7 @@ This scripts originate from [hyperfine](https://github.com/sharkdp/hyperfine/tre
 ```bash
 cargo run --release --example accuracy -- 1000
 for items in 100 1000 10000 100000 all; do
-    for body in shakespeare ulysses war_and_peace; do
+    for body in shakespeare ulysses war_and_peace combined; do
         python scripts/plot_whisker.py stats/${body}-${items}.json -o stats/${body}-${items}.png
     done
 done
