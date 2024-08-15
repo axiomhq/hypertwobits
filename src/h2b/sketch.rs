@@ -28,7 +28,7 @@ pub trait Sketch: Default {
 }
 
 /// M = 64, using two 64 bit integers to store the sketch
-#[derive(Default)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone, Default)]
 pub struct M64 {
     low: u64,
     high: u64,
@@ -98,7 +98,7 @@ impl Sketch for M64 {
 /// instructions for 128 bit integers.
 ///
 /// The implementation is similar to M64
-#[derive(Default)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone, Default)]
 pub struct M128 {
     low: u128,
     high: u128,
@@ -159,7 +159,7 @@ impl Sketch for M128 {
 /// We use a register to store hi and low bits together
 /// to optimize for cache locallity when compiting inside
 /// a vectored sketch
-#[derive(Default, Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug, Eq, PartialEq, Hash)]
 struct HiLoRegister {
     high: u128,
     low: u128,
@@ -169,6 +169,7 @@ struct HiLoRegister {
 ///
 /// This is not meant to be used directly instead it serves as
 /// a base for the other vectored sketches
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub struct M128Reg<const REGISTERS: usize> {
     registers: [HiLoRegister; REGISTERS],
 }
