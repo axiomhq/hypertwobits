@@ -70,7 +70,7 @@ fn run<S: Sketch>(f: &str, actual: usize, delta: f64, mut n: usize) -> std::io::
     let count = actual as f64;
     let delta_hll = (count - hll.len()).abs() / count;
     let delta_htb = (count - htb.count() as f64).abs() / count;
-    let delta_htbm = (count - htb_a.count() as f64).abs() / count;
+    // let delta_htbm = (count - htb_a.count() as f64).abs() / count;
 
     let diff_htb = delta_htb - delta_hll;
     // let diff_htbm = delta_htbm - delta_hll;
