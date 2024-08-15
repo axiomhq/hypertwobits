@@ -162,6 +162,7 @@ impl Sketch for M128 {
 /// to optimize for cache locallity when compiting inside
 /// a vectored sketch
 #[derive(Default, Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 struct HiLoRegister {
     high: u128,
     low: u128,
