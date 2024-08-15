@@ -60,7 +60,7 @@ impl<HASH: BuildHasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
             clippy::cast_sign_loss,
             clippy::cast_possible_truncation
         )]
-        let threshold = const { (0.99 * (BITS::M as f64)) as u32 };
+        let threshold = const { (0.99 * (BITS::STREAMS as f64)) as u32 };
         // for simplicity we ensure that `self` is always the larger sketch
         if other.t > self.t {
             std::mem::swap(self, &mut other);
@@ -89,35 +89,36 @@ impl<HASH: BuildHasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
         // update the count
         self.count = self.sketch.count();
     }
+
     #[inline]
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     /// Inserts a value into the counter
-    pub fn insert<V: std::hash::Hash + ?Sized>(&mut self, v: &V) {
-        let x = self.hash.hash_one(v);
-        self.insert_hash(x);
+    pub fn insert<V: std::hash::Hash + ?Sized>(&mut self, value: &V) {
+        let hash = self.hash.hash_one(value);
+        self.insert_hash(hash);
     }
 
     #[inline]
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     /// Inserts a value into the counter
-    pub fn insert_hash(&mut self, x: u64) {
-        let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
+    pub fn insert_hash(&mut self, hash: u64) {
+        let threshold: u32 = const { (Self::ALPHA * BITS::STREAMS as f64) as u32 };
         // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
+        let stream: u32 = (hash >> BITS::IDX_SHIFT) as u32;
+        let hash: u64 = hash & BITS::HASH_MASK;
 
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
+        if hash.trailing_ones() >= self.t && self.sketch.val(stream) < 1 {
             self.count += 1;
-            self.sketch.set(k, 1);
+            self.sketch.set(stream, 1);
         }
         // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
+        if hash.trailing_ones() >= self.t + 4 && self.sketch.val(stream) < 2 {
+            self.sketch.set(stream, 2);
         }
 
         // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
+        if hash.trailing_ones() >= self.t + 8 && self.sketch.val(stream) < 3 {
+            self.sketch.set(stream, 3);
         }
 
         if self.count >= threshold {
@@ -131,44 +132,44 @@ impl<HASH: BuildHasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     /// Inserts 2 elements into the counter for micro batching purposes, note this will delay
     /// the count update to the end
     pub fn insert2<V: std::hash::Hash>(&mut self, v1: &V, v2: &V) {
-        let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
+        let threshold: u32 = const { (Self::ALPHA * BITS::STREAMS as f64) as u32 };
 
-        let x = self.hash.hash_one(v1);
+        let hash = self.hash.hash_one(v1);
         // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
+        let stream: u32 = (hash >> BITS::IDX_SHIFT) as u32;
+        let hash: u64 = hash & BITS::HASH_MASK;
 
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
+        if hash.trailing_ones() >= self.t && self.sketch.val(stream) < 1 {
             self.count += 1;
-            self.sketch.set(k, 1);
+            self.sketch.set(stream, 1);
         }
         // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
+        if hash.trailing_ones() >= self.t + 4 && self.sketch.val(stream) < 2 {
+            self.sketch.set(stream, 2);
         }
 
         // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
+        if hash.trailing_ones() >= self.t + 8 && self.sketch.val(stream) < 3 {
+            self.sketch.set(stream, 3);
         }
 
-        let x = self.hash.hash_one(v2);
+        let hash = self.hash.hash_one(v2);
         // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
+        let stream: u32 = (hash >> BITS::IDX_SHIFT) as u32;
+        let hash: u64 = hash & BITS::HASH_MASK;
 
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
+        if hash.trailing_ones() >= self.t && self.sketch.val(stream) < 1 {
             self.count += 1;
-            self.sketch.set(k, 1);
+            self.sketch.set(stream, 1);
         }
         // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
+        if hash.trailing_ones() >= self.t + 4 && self.sketch.val(stream) < 2 {
+            self.sketch.set(stream, 2);
         }
 
         // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
+        if hash.trailing_ones() >= self.t + 8 && self.sketch.val(stream) < 3 {
+            self.sketch.set(stream, 3);
         }
 
         if self.count >= threshold {
@@ -182,82 +183,82 @@ impl<HASH: BuildHasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     /// Inserts 4 elements into the counter for micro batching purposes, note this will delay
     /// the count update to the end
     pub fn insert4<V: std::hash::Hash>(&mut self, v1: &V, v2: &V, v3: &V, v4: &V) {
-        let threshold: u32 = const { (Self::ALPHA * BITS::M as f64) as u32 };
+        let threshold: u32 = const { (Self::ALPHA * BITS::STREAMS as f64) as u32 };
 
-        let x = self.hash.hash_one(v1);
+        let hash = self.hash.hash_one(v1);
         // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
+        let stream: u32 = (hash >> BITS::IDX_SHIFT) as u32;
+        let hash: u64 = hash & BITS::HASH_MASK;
 
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
+        if hash.trailing_ones() >= self.t && self.sketch.val(stream) < 1 {
             self.count += 1;
-            self.sketch.set(k, 1);
+            self.sketch.set(stream, 1);
         }
         // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
+        if hash.trailing_ones() >= self.t + 4 && self.sketch.val(stream) < 2 {
+            self.sketch.set(stream, 2);
         }
 
         // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
+        if hash.trailing_ones() >= self.t + 8 && self.sketch.val(stream) < 3 {
+            self.sketch.set(stream, 3);
         }
 
-        let x = self.hash.hash_one(v2);
+        let hash = self.hash.hash_one(v2);
         // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
+        let stream: u32 = (hash >> BITS::IDX_SHIFT) as u32;
+        let hash: u64 = hash & BITS::HASH_MASK;
 
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
+        if hash.trailing_ones() >= self.t && self.sketch.val(stream) < 1 {
             self.count += 1;
-            self.sketch.set(k, 1);
+            self.sketch.set(stream, 1);
         }
         // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
+        if hash.trailing_ones() >= self.t + 4 && self.sketch.val(stream) < 2 {
+            self.sketch.set(stream, 2);
         }
 
         // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
+        if hash.trailing_ones() >= self.t + 8 && self.sketch.val(stream) < 3 {
+            self.sketch.set(stream, 3);
         }
 
-        let x = self.hash.hash_one(v3);
+        let hash = self.hash.hash_one(v3);
         // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
+        let stream: u32 = (hash >> BITS::IDX_SHIFT) as u32;
+        let hash: u64 = hash & BITS::HASH_MASK;
 
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
+        if hash.trailing_ones() >= self.t && self.sketch.val(stream) < 1 {
             self.count += 1;
-            self.sketch.set(k, 1);
+            self.sketch.set(stream, 1);
         }
         // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
+        if hash.trailing_ones() >= self.t + 4 && self.sketch.val(stream) < 2 {
+            self.sketch.set(stream, 2);
         }
 
         // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
+        if hash.trailing_ones() >= self.t + 8 && self.sketch.val(stream) < 3 {
+            self.sketch.set(stream, 3);
         }
 
-        let x = self.hash.hash_one(v4);
+        let hash = self.hash.hash_one(v4);
         // use most significant bits for k the rest for x
-        let k: u32 = (x >> BITS::K_SHIFT) as u32;
-        let x: u64 = x & BITS::X_MASK;
+        let stream: u32 = (hash >> BITS::IDX_SHIFT) as u32;
+        let hash: u64 = hash & BITS::HASH_MASK;
 
-        if x.trailing_ones() >= self.t && self.sketch.val(k) < 1 {
+        if hash.trailing_ones() >= self.t && self.sketch.val(stream) < 1 {
             self.count += 1;
-            self.sketch.set(k, 1);
+            self.sketch.set(stream, 1);
         }
         // 2^4
-        if x.trailing_ones() >= self.t + 4 && self.sketch.val(k) < 2 {
-            self.sketch.set(k, 2);
+        if hash.trailing_ones() >= self.t + 4 && self.sketch.val(stream) < 2 {
+            self.sketch.set(stream, 2);
         }
 
         // 2^8
-        if x.trailing_ones() >= self.t + 8 && self.sketch.val(k) < 3 {
-            self.sketch.set(k, 3);
+        if hash.trailing_ones() >= self.t + 8 && self.sketch.val(stream) < 3 {
+            self.sketch.set(stream, 3);
         }
 
         if self.count >= threshold {
@@ -271,8 +272,8 @@ impl<HASH: BuildHasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     #[inline]
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn count(&self) -> u64 {
-        let beta = 1.0 - f64::from(self.count) / f64::from(BITS::M);
+        let beta = 1.0 - f64::from(self.count) / f64::from(BITS::STREAMS);
         let bias: f64 = (1.0 / beta).ln();
-        ((2.0_f64.powf(f64::from(self.t))) * f64::from(BITS::M) * bias) as u64
+        ((2.0_f64.powf(f64::from(self.t))) * f64::from(BITS::STREAMS) * bias) as u64
     }
 }

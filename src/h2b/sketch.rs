@@ -4,17 +4,17 @@
 /// and avoid conditionals, loops and branches.
 pub trait Sketch: Default {
     /// Number of substreams
-    const M: u32;
+    const STREAMS: u32;
     /// bitmask for x, the most significant bits n bits are used so that 2^n = M
     /// this is pre-compuated into a const to let the compiler do it's magic
-    const X_MASK: u64;
+    const HASH_MASK: u64;
     /// number of bits to shift to get k, turns the most significant n bits into k
     /// so that 2^n = M
-    const K_SHIFT: u32;
+    const IDX_SHIFT: u32;
     /// Fetches the value of the sketch at position k
-    fn val(&self, k: u32) -> u8;
+    fn val(&self, stream: u32) -> u8;
     /// Sets the value of the sketch at position k
-    fn set(&mut self, k: u32, v: u8);
+    fn set(&mut self, stream: u32, value: u8);
     /// Decrements the sketch and returns the new element count
     fn decrement(&mut self) -> u32;
     /// Returns the number of active sub streams in the sketch
@@ -30,59 +30,65 @@ pub trait Sketch: Default {
 /// M = 64, using two 64 bit integers to store the sketch
 #[derive(Default)]
 pub struct M64 {
-    lo: u64,
-    hi: u64,
+    low: u64,
+    high: u64,
 }
 
 impl Sketch for M64 {
-    const M: u32 = 64;
-    const X_MASK: u64 =
+    const STREAMS: u32 = 64;
+    const HASH_MASK: u64 =
         0b0000_0011_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const K_SHIFT: u32 = 58;
+    const IDX_SHIFT: u32 = 58;
     #[inline]
     #[allow(clippy::cast_possible_truncation)]
-    fn val(&self, k: u32) -> u8 {
-        debug_assert!(k < Self::M);
-        let hi = (self.hi >> k) as u8 & 1;
-        let lo = (self.lo >> k) as u8 & 1;
-        hi << 1 | lo
+    fn val(&self, stream: u32) -> u8 {
+        debug_assert!(stream < Self::STREAMS);
+        let high_bit = (self.high >> stream) as u8 & 1;
+        let low_bit = (self.low >> stream) as u8 & 1;
+        high_bit << 1 | low_bit
     }
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(k < Self::M);
-        debug_assert!(v < 4);
-        let v = u64::from(v);
-        self.hi = (self.hi & !(1 << k)) | (((v / 2) & 1) << k);
-        self.lo = (self.lo & !(1 << k)) | ((v & 1) << k);
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(stream < Self::STREAMS);
+        debug_assert!(value < 4);
+        let value = u64::from(value);
+        let value_high_bit = (value >> 1) & 1;
+        let value_low_bit = value & 1;
+        // reset all bits at index
+        self.high &= !(1 << stream);
+        self.low &= !(1 << stream);
+        // set the bits at index to the value
+        self.high |= value_high_bit << stream;
+        self.low |= value_low_bit << stream;
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
         // since we decrement our new count will equal the number of streams that currently are
         // set too two or three so we can count cheaply at this point by just looking at the number
         // of ones in the high bits;
-        let c = self.hi.count_ones();
+        let count = self.high.count_ones();
         // calculate the sketch where each value is decremented by 1
-        self.lo = self.hi & !self.lo;
-        self.hi &= !self.lo;
-        c
+        self.low = self.high & !self.low;
+        self.high &= !self.low;
+        count
     }
     #[inline]
     fn count(&self) -> u32 {
         // count the number of sub channels that are active
         // buy looking which have either the high and/or the low bit set
         // and counting the ones in the value
-        let d = self.hi | self.lo;
-        d.count_ones()
+        let used_streams = self.high | self.low;
+        used_streams.count_ones()
     }
     #[inline]
     fn merge(&mut self, other: &Self) {
-        self.hi |= other.hi;
-        self.lo |= other.lo;
+        self.high |= other.high;
+        self.low |= other.low;
     }
 
     #[inline]
     fn merge_high_into_lo(&mut self, other: &Self) {
-        self.lo |= other.hi;
+        self.low |= other.high;
     }
 }
 
@@ -94,53 +100,59 @@ impl Sketch for M64 {
 /// The implementation is similar to M64
 #[derive(Default)]
 pub struct M128 {
-    lo: u128,
-    hi: u128,
+    low: u128,
+    high: u128,
 }
 
 impl Sketch for M128 {
-    const M: u32 = 128;
-    const X_MASK: u64 =
+    const STREAMS: u32 = 128;
+    const HASH_MASK: u64 =
         0b0000_0001_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const K_SHIFT: u32 = 57;
+    const IDX_SHIFT: u32 = 57;
 
     #[inline]
     #[allow(clippy::cast_possible_truncation)]
-    fn val(&self, k: u32) -> u8 {
-        debug_assert!(k < Self::M);
-        let hi = (self.hi >> k) as u8 & 1;
-        let lo = (self.lo >> k) as u8 & 1;
-        hi << 1 | lo
+    fn val(&self, stream: u32) -> u8 {
+        debug_assert!(stream < Self::STREAMS);
+        let high_bit = (self.high >> stream) as u8 & 1;
+        let low_bit = (self.low >> stream) as u8 & 1;
+        high_bit << 1 | low_bit
     }
 
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(k < Self::M);
-        debug_assert!(v < 4);
-        let v = v as u128;
-        self.hi = (self.hi & !(1 << k)) | (((v / 2) & 1) << k);
-        self.lo = (self.lo & !(1 << k)) | ((v & 1) << k);
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(stream < Self::STREAMS);
+        debug_assert!(value < 4);
+        let value = value as u128;
+        let value_high_bit = (value >> 1) & 1;
+        let value_low_bit = value & 1;
+        // reset all bits at index
+        self.high &= !(1 << stream);
+        self.low &= !(1 << stream);
+        // set the bits at index to the value
+        self.high |= value_high_bit << stream;
+        self.low |= value_low_bit << stream;
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
-        let count = self.hi.count_ones();
-        self.lo = self.hi & !self.lo;
-        self.hi &= !self.lo;
+        let count = self.high.count_ones();
+        self.low = self.high & !self.low;
+        self.high &= !self.low;
         count
     }
     #[inline]
     fn count(&self) -> u32 {
-        let d = self.hi | self.lo;
-        d.count_ones()
+        let used_streams = self.high | self.low;
+        used_streams.count_ones()
     }
     #[inline]
     fn merge(&mut self, other: &Self) {
-        self.hi |= other.hi;
-        self.lo |= other.lo;
+        self.high |= other.high;
+        self.low |= other.low;
     }
     #[inline]
     fn merge_high_into_lo(&mut self, other: &Self) {
-        self.lo |= other.hi;
+        self.low |= other.high;
     }
 }
 
@@ -149,8 +161,8 @@ impl Sketch for M128 {
 /// a vectored sketch
 #[derive(Default, Clone, Copy, Debug)]
 struct HiLoRegister {
-    hi: u128,
-    lo: u128,
+    high: u128,
+    low: u128,
 }
 /// Generic scatch using `REGISTERS` 128 bit `HiLoRegister`
 /// so the total M for the sketch is `REGISTERS` * 128.
@@ -158,13 +170,13 @@ struct HiLoRegister {
 /// This is not meant to be used directly instead it serves as
 /// a base for the other vectored sketches
 pub struct M128Reg<const REGISTERS: usize> {
-    s: [HiLoRegister; REGISTERS],
+    registers: [HiLoRegister; REGISTERS],
 }
 
 impl<const REGISTERS: usize> Default for M128Reg<REGISTERS> {
     fn default() -> Self {
         Self {
-            s: [HiLoRegister { hi: 0, lo: 0 }; REGISTERS],
+            registers: [HiLoRegister { high: 0, low: 0 }; REGISTERS],
         }
     }
 }
@@ -172,65 +184,74 @@ impl<const REGISTERS: usize> Default for M128Reg<REGISTERS> {
 impl<const REGISTERS: usize> M128Reg<REGISTERS> {
     const REG_SIZE: usize = 128;
     #[inline]
-    fn val(&self, k: u32) -> u8 {
+    fn val(&self, stream: u32) -> u8 {
         // Calculate the index in the sketch vector
-        let i = k as usize / Self::REG_SIZE;
+        let register_index = stream as usize / Self::REG_SIZE;
         // calculate the left over index into the sketc
-        let k = k as usize % Self::REG_SIZE;
+        let bit_index = stream as usize % Self::REG_SIZE;
         // Calculate the high bit
-        let hi = ((self.s[i].hi >> k) & 1) as u8;
+        let high_bit = ((self.registers[register_index].high >> bit_index) & 1) as u8;
         // Calculate the low bit
-        let lo = ((self.s[i].lo >> k) & 1) as u8;
-        (hi << 1) | lo
+        let low_bit = ((self.registers[register_index].low >> bit_index) & 1) as u8;
+        (high_bit << 1) | low_bit
     }
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(v < 4);
-        let v: u128 = v as u128;
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(value < 4);
         // Calculate the index in the sketch vector
-        let i = k as usize / Self::REG_SIZE;
+        let register_index = stream as usize / Self::REG_SIZE;
         // calculate the left over index into the sketc
-        let k = k as usize % Self::REG_SIZE;
-        // set the high bit by first clearing the bit in the sketch and then setting it
-        // to the value in v
-        self.s[i].hi = (self.s[i].hi & !(1 << k)) | (((v / 2) & 1) << k);
-        // set the low bit analogously
-        self.s[i].lo = (self.s[i].lo & !(1 << k)) | ((v & 1) << k);
+        let bit_index = stream as usize % Self::REG_SIZE;
+
+        // split value in it's respective bits
+        let value = u128::from(value);
+        let value_high_bit = (value >> 1) & 1;
+        let value_low_bit = value & 1;
+
+        // reset all bits at index
+        self.registers[register_index].high &= !(1 << bit_index);
+        self.registers[register_index].low &= !(1 << bit_index);
+
+        // set the bits at index to the value
+        self.registers[register_index].high |= value_high_bit << bit_index;
+        self.registers[register_index].low |= value_low_bit << bit_index;
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
         let mut count = 0;
         // Decrement by decrementing each register
-        for s in &mut self.s {
-            count += s.hi.count_ones();
-            s.lo = s.hi & !s.lo;
-            s.hi &= !s.lo;
+        for register in &mut self.registers {
+            count += register.high.count_ones();
+            register.low = register.high & !register.low;
+            register.high &= !register.low;
         }
         count
     }
     #[inline]
     fn count(&self) -> u32 {
-        let mut r = 0;
+        let mut count = 0;
         // Count the number of active substreams by counting them for each register
         // and summing them up
-        for s in self.s {
-            r += (s.hi | s.lo).count_ones();
+        for registers in self.registers {
+            count += (registers.high | registers.low).count_ones();
         }
-        r
+        count
     }
     #[inline]
     fn merge(&mut self, other: &Self) {
         // Merge by merging each register
-        for (a, b) in self.s.iter_mut().zip(other.s.iter()) {
-            a.hi |= b.hi;
-            a.lo |= b.lo;
+        for (self_register, other_register) in self.registers.iter_mut().zip(other.registers.iter())
+        {
+            self_register.high |= other_register.high;
+            self_register.low |= other_register.low;
         }
     }
     #[inline]
     fn merge_high_into_lo(&mut self, other: &Self) {
         // Merge by merging each register
-        for (a, b) in self.s.iter_mut().zip(other.s.iter()) {
-            a.lo |= b.hi;
+        for (self_register, other_register) in self.registers.iter_mut().zip(other.registers.iter())
+        {
+            self_register.low |= other_register.high;
         }
     }
 }
@@ -239,22 +260,22 @@ impl<const REGISTERS: usize> M128Reg<REGISTERS> {
 pub type M256 = M128Reg<2>;
 
 impl Sketch for M256 {
-    const M: u32 = 256;
-    const X_MASK: u64 =
+    const STREAMS: u32 = 256;
+    const HASH_MASK: u64 =
         0b0000_0000_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const K_SHIFT: u32 = 56;
+    const IDX_SHIFT: u32 = 56;
 
     #[inline]
-    fn val(&self, k: u32) -> u8 {
-        debug_assert!(k < Self::M);
-        self.val(k)
+    fn val(&self, stream: u32) -> u8 {
+        debug_assert!(stream < Self::STREAMS);
+        self.val(stream)
     }
 
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(k < Self::M);
-        debug_assert!(v < 4);
-        self.set(k, v);
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(stream < Self::STREAMS);
+        debug_assert!(value < 4);
+        self.set(stream, value);
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
@@ -278,22 +299,22 @@ impl Sketch for M256 {
 pub type M512 = M128Reg<4>;
 
 impl Sketch for M512 {
-    const M: u32 = 512;
-    const X_MASK: u64 =
+    const STREAMS: u32 = 512;
+    const HASH_MASK: u64 =
         0b0000_0000_0111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const K_SHIFT: u32 = 55;
+    const IDX_SHIFT: u32 = 55;
 
     #[inline]
-    fn val(&self, k: u32) -> u8 {
-        debug_assert!(k < Self::M);
-        self.val(k)
+    fn val(&self, stream: u32) -> u8 {
+        debug_assert!(stream < Self::STREAMS);
+        self.val(stream)
     }
 
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(k < Self::M);
-        debug_assert!(v < 4);
-        self.set(k, v);
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(stream < Self::STREAMS);
+        debug_assert!(value < 4);
+        self.set(stream, value);
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
@@ -317,22 +338,22 @@ impl Sketch for M512 {
 pub type M1024 = M128Reg<8>;
 
 impl Sketch for M1024 {
-    const M: u32 = 1024;
-    const X_MASK: u64 =
+    const STREAMS: u32 = 1024;
+    const HASH_MASK: u64 =
         0b0000_0000_0011_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const K_SHIFT: u32 = 54;
+    const IDX_SHIFT: u32 = 54;
 
     #[inline]
-    fn val(&self, k: u32) -> u8 {
-        debug_assert!(k < Self::M);
-        self.val(k)
+    fn val(&self, stream: u32) -> u8 {
+        debug_assert!(stream < Self::STREAMS);
+        self.val(stream)
     }
 
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(k < Self::M);
-        debug_assert!(v < 4);
-        self.set(k, v);
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(stream < Self::STREAMS);
+        debug_assert!(value < 4);
+        self.set(stream, value);
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
@@ -356,22 +377,22 @@ impl Sketch for M1024 {
 pub type M2048 = M128Reg<16>;
 
 impl Sketch for M2048 {
-    const M: u32 = 2048;
-    const X_MASK: u64 =
+    const STREAMS: u32 = 2048;
+    const HASH_MASK: u64 =
         0b0000_0000_0001_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const K_SHIFT: u32 = 53;
+    const IDX_SHIFT: u32 = 53;
 
     #[inline]
-    fn val(&self, k: u32) -> u8 {
-        debug_assert!(k < Self::M);
-        self.val(k)
+    fn val(&self, stream: u32) -> u8 {
+        debug_assert!(stream < Self::STREAMS);
+        self.val(stream)
     }
 
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(k < Self::M);
-        debug_assert!(v < 4);
-        self.set(k, v);
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(stream < Self::STREAMS);
+        debug_assert!(value < 4);
+        self.set(stream, value);
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
@@ -395,22 +416,22 @@ impl Sketch for M2048 {
 pub type M4096 = M128Reg<32>;
 
 impl Sketch for M4096 {
-    const M: u32 = 4096;
-    const X_MASK: u64 =
+    const STREAMS: u32 = 4096;
+    const HASH_MASK: u64 =
         0b0000_0000_0000_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const K_SHIFT: u32 = 52;
+    const IDX_SHIFT: u32 = 52;
 
     #[inline]
-    fn val(&self, k: u32) -> u8 {
-        debug_assert!(k < Self::M);
-        self.val(k)
+    fn val(&self, stream: u32) -> u8 {
+        debug_assert!(stream < Self::STREAMS);
+        self.val(stream)
     }
 
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(k < Self::M);
-        debug_assert!(v < 4);
-        self.set(k, v);
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(stream < Self::STREAMS);
+        debug_assert!(value < 4);
+        self.set(stream, value);
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
@@ -434,22 +455,22 @@ impl Sketch for M4096 {
 pub type M8192 = M128Reg<64>;
 
 impl Sketch for M8192 {
-    const M: u32 = 4096;
-    const X_MASK: u64 =
+    const STREAMS: u32 = 4096;
+    const HASH_MASK: u64 =
         0b0000_0000_0000_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const K_SHIFT: u32 = 52;
+    const IDX_SHIFT: u32 = 52;
 
     #[inline]
-    fn val(&self, k: u32) -> u8 {
-        debug_assert!(k < Self::M);
-        self.val(k)
+    fn val(&self, stream: u32) -> u8 {
+        debug_assert!(stream < Self::STREAMS);
+        self.val(stream)
     }
 
     #[inline]
-    fn set(&mut self, k: u32, v: u8) {
-        debug_assert!(k < Self::M);
-        debug_assert!(v < 4);
-        self.set(k, v);
+    fn set(&mut self, stream: u32, value: u8) {
+        debug_assert!(stream < Self::STREAMS);
+        debug_assert!(value < 4);
+        self.set(stream, value);
     }
     #[inline]
     fn decrement(&mut self) -> u32 {
@@ -475,14 +496,14 @@ mod tests {
 
     fn test<S: Sketch>() {
         let mut s = S::default();
-        for i in 0..S::M {
+        for i in 0..S::STREAMS {
             assert_eq!(s.val(i), 0);
 
             for r in 1..=3 {
                 s.set(i, r);
                 assert_eq!(s.val(i), r);
             }
-            for j in 0..S::M {
+            for j in 0..S::STREAMS {
                 if j == i {
                     assert_eq!(s.val(j), 3);
                 } else {
@@ -492,18 +513,18 @@ mod tests {
             s.set(i, 0);
             assert_eq!(s.val(i), 0);
         }
-        for i in 0..S::M {
+        for i in 0..S::STREAMS {
             s.set(i, 3);
             assert_eq!(s.val(i), 3);
         }
         for r in (0..=2).rev() {
             s.decrement();
-            for i in 0..S::M {
+            for i in 0..S::STREAMS {
                 assert_eq!(s.val(i), r);
             }
         }
         s.decrement();
-        for i in 0..S::M {
+        for i in 0..S::STREAMS {
             assert_eq!(s.val(i), 0);
         }
     }
