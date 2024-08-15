@@ -10,6 +10,7 @@ use crate::M256;
 
 /// Random Seeded `AHasher` Builder that allows for seeded hashing per `HyperTwoBit` isnstance
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct AHasherBuilder {
     state: u64,
 }
@@ -38,6 +39,7 @@ pub type AHasherDefaultBuilder = BuildHasherDefault<ahash::AHasher>;
 /// Random Seeded `SipHasher13` Builder
 #[cfg(feature = "siphash")]
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct SipHasher13Builder {
     state: u64,
 }
@@ -68,6 +70,7 @@ pub type SipHasher13DefaultBuilder = BuildHasherDefault<siphasher::sip::SipHashe
 ///
 /// Both the hasher and the sub stream size siaz can be customized, by default it uses `AHasherBuilder` and `M256`
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: BuildHasher = AHasherDefaultBuilder> {
     hash: HASH,
     sketch: SKETCH,

@@ -2,6 +2,7 @@ use std::hash::Hasher;
 
 /// `HyperBitBit` cardinality counter with 64 substreams
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct HyperBitBit64<HASH: Hasher + Default = ahash::AHasher> {
     _hash: std::marker::PhantomData<HASH>,
     sketch1: u64,
