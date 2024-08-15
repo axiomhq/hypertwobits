@@ -43,8 +43,7 @@ impl Sketch for M64 {
     #[inline]
     #[allow(clippy::cast_possible_truncation)]
     fn val(&self, stream: u32) -> u8 {
-        debug_assert!(stream 
-          Self::STREAMS);
+        debug_assert!(stream < Self::STREAMS);
         let high_bit = (self.high >> stream) as u8 & 1;
         let low_bit = (self.low >> stream) as u8 & 1;
         high_bit << 1 | low_bit
@@ -163,6 +162,7 @@ impl Sketch for M128 {
 /// to optimize for cache locallity when compiting inside
 /// a vectored sketch
 #[derive(Default, Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 struct HiLoRegister {
     high: u128,
     low: u128,
