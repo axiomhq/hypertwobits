@@ -30,6 +30,7 @@ use std::hash::{BuildHasher, BuildHasherDefault, Hasher as _};
 pub use prelude::*;
 
 /// Random Seeded `AHasher` Builder that allows for seeded hashing per `HyperTwoBit` isnstance
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct AHasherBuilder {
     state: u64,
 }
@@ -57,6 +58,7 @@ pub type AHasherDefaultBuilder = BuildHasherDefault<ahash::AHasher>;
 
 /// Random Seeded `SipHasher13` Builder
 #[cfg(feature = "siphash")]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct SipHasher13Builder {
     state: u64,
 }

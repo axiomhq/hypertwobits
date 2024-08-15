@@ -40,6 +40,7 @@ pub trait Sketch: Default {
 
 /// M = 64, using two 64 bit integers to store the sketch
 #[derive(Default)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct M64 {
     high: u64,
     middle: u64,
@@ -122,6 +123,7 @@ impl Sketch for M64 {
 ///
 /// The implementation is similar to M64
 #[derive(Default)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct M128 {
     low: u128,
     middle: u128,
@@ -193,6 +195,7 @@ impl Sketch for M128 {
 /// to optimize for cache locallity when compiting inside
 /// a vectored sketch
 #[derive(Default, Clone, Copy, Debug)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 struct BitRegister {
     high: u128,
     middle: u128,
@@ -203,6 +206,7 @@ struct BitRegister {
 ///
 /// This is not meant to be used directly instead it serves as
 /// a base for the other vectored sketches
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct M128Reg<const REGISTERS: usize> {
     registers: [BitRegister; REGISTERS],
 }

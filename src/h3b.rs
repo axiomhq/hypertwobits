@@ -12,6 +12,7 @@ use crate::AHasherDefaultBuilder;
 /// different numbers of sub streams.
 ///
 /// Both the hasher and the sub stream size siaz can be customized, by default it uses `AHasherBuilder` and `M256`
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct HyperThreeBits<SKETCH: Sketch = M256, HASH: BuildHasher = AHasherDefaultBuilder> {
     hash: HASH,
     sketch: SKETCH,

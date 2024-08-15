@@ -29,6 +29,7 @@ pub trait Sketch: Default {
 
 /// M = 64, using two 64 bit integers to store the sketch
 #[derive(Default)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct M64 {
     low: u64,
     high: u64,
@@ -99,6 +100,7 @@ impl Sketch for M64 {
 ///
 /// The implementation is similar to M64
 #[derive(Default)]
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct M128 {
     low: u128,
     high: u128,
@@ -169,6 +171,7 @@ struct HiLoRegister {
 ///
 /// This is not meant to be used directly instead it serves as
 /// a base for the other vectored sketches
+#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
 pub struct M128Reg<const REGISTERS: usize> {
     registers: [HiLoRegister; REGISTERS],
 }
