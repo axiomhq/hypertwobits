@@ -24,7 +24,7 @@ It uses 128-bit integers to take advantage of wide registers where possible.
 - It changes the register layout for high/low bits in the scatch to colocate the memory for each region.
 - It adds micro batching functions that improve performance when two or four values can be provided at the same time.
 
-Based on [benchmarks](https://github.com/axiomhq/hypertwobits/actions/workflows/criterion.yml) it is about 2 times faster than `HyperLogLogPlus` and 1.5x faster than `HyperBitBit` or respectively 4x and 2.5x faster when used with non-seeded hashers.
+## Example
 
  ```rust
  use hypertwobits::{HyperTwoBits, M512};
@@ -35,3 +35,33 @@ Based on [benchmarks](https://github.com/axiomhq/hypertwobits/actions/workflows/
  ```
 
 
+## Seeded Hash vs. Unseeded Hash
+By default, `HyperTwoBits` uses `ahash` as the hasher. This hasher is **not** seeded with a random
+value by default. This means that the same input will always produce the same output.
+
+Unlike HashMap's the attack surface this opens up is minimal. The only way to exploit this is to 
+craft an input that would deliberately return imprecise results. This is a non-issue for most use cases.
+
+However, we provide the `AHasherBuilder` that creates a random state that is used to seed the hasher.
+The tradeoff is that this will be slower, use more memory and means sketches can no longer be merged.
+
+## Benchmarks
+
+Based on [benchmarks](https://github.com/axiomhq/hypertwobits/actions/workflows/criterion.yml) it is about 2 times faster than `HyperLogLogPlus` and 1.5x faster than `HyperBitBit` or respectively 4x and 2.5x faster when used with non-seeded hashers.
+
+
+## Accuracy
+
+The accuracy of `HyperTwoBits` is roughyly similar to `HyperLogLog` but significantly inferior to `HyperLogLogPlus`. A few measurements based on example inputs:
+
+### Shakespeare
+
+![Shakespeare](stats/shakespeare-all.png)
+
+### Ulysses
+
+![Ulysses](stats/ulysses-all.png)
+
+### War and Peace
+
+![War and Peace](stats/war_and_peace-all.png)
