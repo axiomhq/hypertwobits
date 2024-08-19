@@ -1,6 +1,6 @@
 [package]
 name = "hypertwobits"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "HyperTwoBits cardinality estimation algorithm"
 license = "MIT OR Apache-2.0"
