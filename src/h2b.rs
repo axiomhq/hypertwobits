@@ -12,8 +12,8 @@ use crate::AHasherDefaultBuilder;
 /// different numbers of sub streams.
 ///
 /// Both the hasher and the sub stream size siaz can be customized, by default it uses `AHasherBuilder` and `M256`
-#[derive(Debug, Eq, PartialEq, Hash, Clone)]
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemDbg, mem_dbg::MemSize))]
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: BuildHasher = AHasherDefaultBuilder> {
     hash: HASH,
     sketch: SKETCH,
@@ -21,10 +21,10 @@ pub struct HyperTwoBits<SKETCH: Sketch = M256, HASH: BuildHasher = AHasherDefaul
     t: u32,
 }
 
-impl<SKETCH: Sketch> Default for HyperTwoBits<SKETCH> {
+impl<SKETCH: Sketch, H: Default + BuildHasher> Default for HyperTwoBits<SKETCH, H> {
     fn default() -> Self {
         Self {
-            hash: AHasherDefaultBuilder::default(),
+            hash: H::default(),
             sketch: SKETCH::default(),
             count: 0,
             t: 1,
