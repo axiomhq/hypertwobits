@@ -276,6 +276,6 @@ impl<HASH: BuildHasher + Default, BITS: Sketch> HyperTwoBits<BITS, HASH> {
     pub fn count(&self) -> u64 {
         let beta = 1.0 - f64::from(self.count) / f64::from(BITS::STREAMS);
         let bias: f64 = (1.0 / beta).ln();
-        ((2.0_f64.powf(f64::from(self.t))) * f64::from(BITS::STREAMS) * bias) as u64
+        (f64::from(self.t).exp2() * f64::from(BITS::STREAMS) * bias) as u64
     }
 }
