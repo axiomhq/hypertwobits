@@ -32,6 +32,10 @@ fn htb2048_size() {
 fn htb4096_size() {
     assert_eq!(std::mem::size_of::<HyperThreeBits<super::M4096>>(), 1552);
 }
+#[test]
+fn htb8192_size() {
+    assert_eq!(std::mem::size_of::<HyperThreeBits<super::M8192>>(), 3088);
+}
 
 #[allow(
     clippy::cast_precision_loss,

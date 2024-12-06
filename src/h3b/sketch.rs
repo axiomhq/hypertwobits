@@ -500,7 +500,7 @@ impl Sketch for M4096 {
     }
 }
 
-/// M = 4096 Sketch Implementation
+/// M = M8192 Sketch Implementation
 pub type M8192 = M128Reg<64>;
 
 impl Sketch for M8192 {
@@ -605,5 +605,9 @@ mod tests {
     #[test]
     fn test_m4096() {
         test::<M4096>();
+    }
+    #[test]
+    fn test_m8192() {
+        test::<M8192>();
     }
 }

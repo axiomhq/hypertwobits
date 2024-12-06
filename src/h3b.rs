@@ -4,7 +4,7 @@ mod tests;
 
 use std::hash::BuildHasher;
 
-pub use sketch::{Sketch, M1024, M128, M2048, M256, M4096, M512, M64};
+pub use sketch::{Sketch, M1024, M128, M2048, M256, M4096, M512, M64, M8192};
 
 use crate::AHasherDefaultBuilder;
 
