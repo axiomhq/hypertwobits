@@ -125,7 +125,7 @@ impl Sketch for M128 {
     fn set(&mut self, stream: u32, value: u8) {
         debug_assert!(stream < Self::STREAMS);
         debug_assert!(value < 4);
-        let value = value as u128;
+        let value = u128::from(value);
         let value_high_bit = (value >> 1) & 1;
         let value_low_bit = value & 1;
         // reset all bits at index
@@ -456,14 +456,14 @@ impl Sketch for M4096 {
     }
 }
 
-/// M = 4096 Sketch Implementation
+/// M = 8192 Sketch Implementation
 pub type M8192 = M128Reg<64>;
 
 impl Sketch for M8192 {
-    const STREAMS: u32 = 4096;
+    const STREAMS: u32 = 8192;
     const HASH_MASK: u64 =
-        0b0000_0000_0000_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const IDX_SHIFT: u32 = 52;
+        0b0000_0000_0000_0111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
+    const IDX_SHIFT: u32 = 51;
 
     #[inline]
     fn val(&self, stream: u32) -> u8 {
@@ -561,5 +561,9 @@ mod tests {
     #[test]
     fn test_m4096() {
         test::<M4096>();
+    }
+    #[test]
+    fn test_m8192() {
+        test::<M8192>();
     }
 }

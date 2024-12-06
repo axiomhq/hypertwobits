@@ -504,10 +504,10 @@ impl Sketch for M4096 {
 pub type M8192 = M128Reg<64>;
 
 impl Sketch for M8192 {
-    const STREAMS: u32 = 4096;
+    const STREAMS: u32 = 8192;
     const HASH_MASK: u64 =
-        0b0000_0000_0000_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
-    const IDX_SHIFT: u32 = 52;
+        0b0000_0000_0000_0111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111_1111;
+    const IDX_SHIFT: u32 = 51;
 
     #[inline]
     fn val(&self, stream: u32) -> u8 {
