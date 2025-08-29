@@ -63,11 +63,11 @@ impl Resultset {
     }
 }
 
-fn hllp(results: &mut Vec<Resultset>, n: usize, data: &[String]) {
-    let mut r = Resultset::new("HyperLogLogPlus", n);
+fn hllp(results: &mut Vec<Resultset>, n: usize, p: u8, data: &[String]) {
+    let mut r = Resultset::new(format!("HyperLogLogPlus({p})"), n);
     for _ in 0..n {
         let mut counter: hyperloglogplus::HyperLogLogPlus<String, RandomState> =
-            hyperloglogplus::HyperLogLogPlus::new(16, RandomState::new()).unwrap();
+            hyperloglogplus::HyperLogLogPlus::new(p, RandomState::new()).unwrap();
         for (i, w) in data.iter().enumerate() {
             counter.insert(w);
             match i {
@@ -239,21 +239,23 @@ fn run(data: &[String], results: &mut Vec<Resultset>, n: usize) {
     r.results_all.push(set.len() as u64);
     results.push(r);
 
-    hllp(results, n, data);
+    hllp(results, n, 11, data);
+    hllp(results, n, 12, data);
+    hllp(results, n, 16, data);
     hll(results, n, data);
     h2b!(
         results, n, data;
         // AHasherBuilder, RandomState, SipHasher13Builder;
         AHasherBuilder;
         // M64, M128, M256, M512, M1024, M2048, M4096
-        M4096
+        M8192
     );
     h3b!(
         results, n, data;
         // AHasherBuilder, RandomState, SipHasher13Builder;
         AHasherBuilder;
         // M64, M128, M256, M512, M1024, M2048, M4096
-        M4096
+        M8192
     );
 }
 

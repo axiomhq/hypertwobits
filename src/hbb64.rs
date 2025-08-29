@@ -54,14 +54,14 @@ impl<HASH: Hasher + Default> HyperBitBit64<HASH> {
         if x & (self.u - 1) == self.u - 1 {
             if (self.sketch1 & (1_u64 << k)) == 0 {
                 self.count1 += 1;
-            };
+            }
             self.sketch1 |= 1 << k;
         }
 
         if x & (4 * self.u - 1) == 4 * self.u - 1 {
             if (self.sketch2 & (1_u64 << k)) == 0 {
                 self.count2 += 1;
-            };
+            }
             self.sketch2 |= 1 << k;
         }
 

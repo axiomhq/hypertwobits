@@ -9,7 +9,6 @@ for items in 100 1000 10000 100000 all; do
         python scripts/plot_whisker.py stats/${body}-${items}.json -o stats/${body}-${items}.png
     done
 done
-
 ```
 
 ### Pre-requisites
